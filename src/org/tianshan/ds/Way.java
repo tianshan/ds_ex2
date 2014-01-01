@@ -1,28 +1,49 @@
 package org.tianshan.ds;
 
-public class Way implements Runnable{
-	private final static int STATE_RELEASED = 0;
-	private final static int STATE_WANTED = 1;
-	private final static int STATE_HELD = 2;
+import java.util.ArrayList;
+
+public abstract class Way implements Runnable{
+	public final static byte STATE_RELEASED = 0;
+	public final static byte STATE_WANTED = 1;
+	public final static byte STATE_HELD = 2;
 	
-	private int state;
+	public byte state;
 	
-	public Way() {
+	public final static byte TYPE_EXIT = 0;
+	public final static byte TYPE_ENTRANCE = 1;
+	
+	public byte type;
+	
+	public int entranceNum;
+	public int exitNum;
+	/** all carport num */
+	public int totalNum;
+	
+	public int remainNum;
+	
+	public int timestamp;
+	
+	public ArrayList<Integer> waitQueue;
+	
+	
+	public Way(byte type, int entranceNum, int exitNum, int totalNum) {
 		this.state = Way.STATE_RELEASED;
+		this.type = type;
+		this.entranceNum = entranceNum;
+		this.exitNum = exitNum;
+		this.totalNum = totalNum;
+		
+		this.timestamp = 0;
+		
+		waitQueue = new ArrayList<Integer>();
 	}
 	
 	public int getState() {
 		return state;
 	}
 	
-	public void setState(int s) {
+	public void setState(byte s) {
 		state = s;
 	}
 
-	@Override
-	public void run() {
-		// TODO Auto-generated method stub
-	}
-	
-	
 }
