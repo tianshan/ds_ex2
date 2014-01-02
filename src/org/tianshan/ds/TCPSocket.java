@@ -1,34 +1,30 @@
 package org.tianshan.ds;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 
 
 public class TCPSocket {
-	private static Socket localSocket;
-//	private static int PORT = 12345;
+	private ServerSocket serverSocket;
+	private Socket clientSocket;
+	private int port;
 	private PrintWriter out;
-	private InputStream is;
 	
-	private InetAddress serverAddr;
 	
-	public TCPSocket(String str, int PORT) throws IOException{
+	public TCPSocket(int port) throws IOException{
+		
+		this.port = port;
 		
 		try{
-			serverAddr = InetAddress.getByName(str);
-			localSocket = new Socket(serverAddr, PORT);
+			serverSocket = new ServerSocket(port);
 			
-//			out = new PrintWriter( 
-//		    		new BufferedWriter( 
-//		    				new OutputStreamWriter(clientsocket.getOutputStream())),true);
-			is = localSocket.getInputStream();
 		}catch(UnknownHostException e){
 		}
 	}
@@ -44,6 +40,10 @@ public class TCPSocket {
 		return true;
 	}
 	
+	public boolean send(int port, Message msg) {
+		return send("127.0.0.1", port, msg);
+	}
+	
 	public boolean send(String toIp, int toPort, Message msg) {
 		
 		InetAddress toAddr;
@@ -51,12 +51,16 @@ public class TCPSocket {
 		
 		try {
 			toAddr = InetAddress.getByName(toIp);
-			Socket toSocket = new Socket(toAddr, toPort);
+			clientSocket = new Socket(toAddr, toPort);
 			
-			os = toSocket.getOutputStream();
+			os = clientSocket.getOutputStream();
 			
 			os.write(msg.toBytes());
 			os.flush();
+			
+			System.out.println("Port "+port+"send msg to "+toPort);
+			
+			clientSocket.close();
 			
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
@@ -70,21 +74,27 @@ public class TCPSocket {
 	public Message recive() {
 		Message msg=null;
 		try {
-
+			clientSocket = serverSocket.accept();
+			SocketAddress socketAddress = clientSocket.getRemoteSocketAddress();
+			
+			InputStream is = clientSocket.getInputStream();
+			
 			byte[] buf = new byte[1024];
 			int len = is.read(buf);
-			
 			String str = new String(buf, 0, len);
 			msg = new Message(str);
-		} catch (IOException e) {
-			e.printStackTrace();
+			System.out.println("Port "+port+" get msg from "+msg.getPort());
+			
+		} catch (IOException e1) {
+			e1.printStackTrace();
 		}
+		
 		return msg;
 	}
 	
 	public void closeSocket(){
 		try{
-			localSocket.close();
+			serverSocket.close();
 		}catch(Exception e){
 			e.printStackTrace();
 		}

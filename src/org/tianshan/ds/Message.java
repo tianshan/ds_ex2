@@ -1,21 +1,28 @@
 package org.tianshan.ds;
 
 public class Message {
-	public final static byte MSG_IN = 0;
-	public final static byte MSG_OUT = 1;
-	public final static byte MSG_NEWIN = 3;
-	public final static byte MSG_NEWOUT = 4;
-	public final static byte MSG_ASK = 5;
+	public final static int MSG_IN = 0;
+	public final static int MSG_OUT = 1;
+	public final static int MSG_NEWIN = 3;
+	public final static int MSG_NEWOUT = 4;
+	public final static int MSG_ASK = 5;
 	
-	private byte type;
+	private int type;
 	
-	private int timestamp;
+	private int timestamp = 0;
 	
-	private int port;
+	private int port = 0;
 	
-	private int inNum;
+	private int inNum = 0;
 	
-	private int outNum;
+	private int outNum = 0;
+	
+	public Message(int type) {
+		if (type != MSG_IN || type != MSG_OUT) {
+			throw new IllegalArgumentException("Error:message type");
+		}
+		this.type = type;
+	}
 	
 	public Message(String msg) {
 		String[] attr = msg.split("@");

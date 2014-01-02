@@ -1,28 +1,97 @@
 package org.tianshan.ds;
 
 import java.io.IOException;
+import java.util.Scanner;
 
 public class Main {
 	
 	public static void main(String[] args) {
 		
-		test();
+//		TCPTest();
+		
+		runTest();
 		
 	}
 	
-	public static void test() {
-		TCPTest[] threads = new TCPTest[2];
+	public static int carportNum = 3;
+	
+	public static void runTest() {
+		int[] ports = {10001, 10002, 10003, 10004, 10005};
 		
-		threads[0] = new TCPTest(12345, 0);
-		threads[1] = new TCPTest(12346, 1);
+		Way[] ways = new Way[ports.length];
 		
-		for (TCPTest t : threads) {
+		for (int i=0; i<ports.length; i++) {
+			int type;
+			if (i>1) type = Way.TYPE_ENTRANCE;
+			else type = Way.TYPE_EXIT;
+			
+			ways[i] = new Way(type, ports.length, carportNum, ports[i], false);
+			ways[i].addWay(ports);
+			
+			Thread t = new Thread(ways[i]);
+			t.start();
+		}
+		TCPSocket tcp = null;
+		try {
+			tcp = new TCPSocket(10000);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		Scanner cin = new Scanner(System.in);
+		while (true) {
+			String cmd = cin.next();
+			String[] attr = cmd.split(",");
+			if (attr.length == 2) {
+				int inNum = Integer.parseInt(attr[0]);
+				int outNum = Integer.parseInt(attr[1]);
+				
+				Message msg;
+				
+				msg = new Message(Message.MSG_IN);
+				for (int i=0; i<inNum; i++) {
+					int index = (int)(Math.random()*ports.length)+1;
+					int port = ports[index];
+					
+					tcp.send(port, msg);
+				}
+				
+				msg = new Message(Message.MSG_OUT);
+				for (int i=0; i<outNum; i++)
+					tcp.send(ports[0], msg);
+				
+				// check state
+				int in=0, out=0;
+				for (int i=0; i<ways.length; i++) {
+					in += ways[i].getInNum();
+					out += ways[i].getOutNum();
+				}
+				System.out.println("--state--");
+				System.out.println("total:"+carportNum);
+				System.out.println("in  num:"+in);
+				System.out.println("out num:"+out);
+				
+			}else {
+				break;
+			}
+				
+		}
+	}
+	
+	
+	public static void TCPTest() {
+		TCPTestThread[] threads = new TCPTestThread[2];
+		
+		threads[0] = new TCPTestThread(12345, 0);
+		threads[1] = new TCPTestThread(12346, 1);
+		
+		for (TCPTestThread t : threads) {
 			t.start();
 		}
 		
 	}
 	
-	public static class TCPTest extends Thread {
+	public static class TCPTestThread extends Thread {
 		
 		TCPSocket tcp;
 		
@@ -30,11 +99,11 @@ public class Main {
 		
 		int type;
 		
-		public TCPTest(int port, int type) {
+		public TCPTestThread(int port, int type) {
 			this.port = port;
 			this.type = type;
 			try {
-				tcp = new TCPSocket("127.0.0.1", port);
+				tcp = new TCPSocket(port);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -46,11 +115,9 @@ public class Main {
 			case 0:
 				msg = new Message("1@"+port+"@1");
 				tcp.send("127.0.0.1", 12346, msg);
-				System.out.println("Port "+port+"send msg to 12346");
 				break;
 			case 1:
 				msg = tcp.recive();
-				System.out.println("Port "+port+"get msg from"+msg.getPort());
 				break;
 			}
 		}
