@@ -39,6 +39,9 @@ public class Way implements Runnable{
 	
 	private int permitNum;
 	
+	/** this represent the car in message timestamp */
+	private int lastTimestamp;
+	
 	public Way(int type, int wayNum, int carportNum, int port, boolean delay) {
 		this.state = Way.STATE_RELEASED;
 		this.type = type;
@@ -78,8 +81,13 @@ public class Way implements Runnable{
 		return timestamp;
 	}
 	
-	private void setTimestamp(int time) {
-		this.timestamp = time;
+	/**
+	 * synchronized update the timestamp
+	 * @param time
+	 */
+	private synchronized void updateTimestamp(int time) {
+		
+		this.timestamp = Math.max(timestamp, time)+1;
 	}
 	
 	public int getPort() { 
@@ -145,6 +153,7 @@ public class Way implements Runnable{
 				break;
 			case Message.MSG_NEWIN:
 			case Message.MSG_NEWOUT:
+				// TODO
 				break;
 			case Message.MSG_ASK:
 				getMsgAsk(msg);
@@ -172,7 +181,8 @@ public class Way implements Runnable{
 			}
 		}
 		
-		this.timestamp += 1;
+		updateTimestamp(timestamp);
+		lastTimestamp = timestamp;
 		
 		System.out.println(port+" get car in, STATE_WANTED");
 		setState(STATE_WANTED);
@@ -237,16 +247,19 @@ public class Way implements Runnable{
 	 * @param msg
 	 */
 	private void getMsgAsk(Message msg) {
+		// update the timestamp
+		updateTimestamp(msg.getTimestamp());
+		
 		if (this.state == STATE_RELEASED) {
-			setTimestamp(msg.getTimestamp());
 			sendPermit(msg.getPort());
 		}else if (this.state == STATE_HELD) {
 			waitQueue.add(msg.getPort());
 		}else if (this.state == STATE_WANTED) {
 			// check timestamp
-			if (msg.getTimestamp() > this.timestamp) {
+			if (msg.getTimestamp() > this.lastTimestamp) {
+				updateTimestamp(Math.max(timestamp, msg.getTimestamp())+1);
 				waitQueue.add(msg.getPort());
-			}else if (msg.getTimestamp() == this.timestamp) {
+			}else if (msg.getTimestamp() == this.lastTimestamp) {
 				// check port num
 				if (port < msg.getPort())
 					waitQueue.add(msg.getPort());
@@ -256,6 +269,7 @@ public class Way implements Runnable{
 				sendPermit(msg.getPort());
 			}
 		}
+		
 	}
 	
 	/**
@@ -264,6 +278,8 @@ public class Way implements Runnable{
 	 * @param msg
 	 */
 	private synchronized void getMsgReplay(Message msg) {
+		updateTimestamp(msg.getTimestamp());
+		
 		if (state != STATE_WANTED) {
 			throw new RuntimeException(port+" State is not STATE_WANTED, get wrong message from "+msg.getPort());
 		}

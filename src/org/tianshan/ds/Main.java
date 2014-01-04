@@ -85,7 +85,7 @@ public class Main {
 		System.out.println("in  num:"+in);
 		System.out.println("out num:"+out);
 		
-		System.out.println("timestamp");
+		System.out.println("--timestamp--");
 		for (int i=0; i<ways.length; i++) {
 			System.out.println(ways[i].getPort()+":"+ways[i].getTimestamp());
 		}
