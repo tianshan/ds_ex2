@@ -37,6 +37,8 @@ public class Way implements Runnable{
 	/** wheather delay handle the message */
 	private boolean delay;
 	
+	private int permitNum;
+	
 	public Way(int type, int wayNum, int carportNum, int port, boolean delay) {
 		this.state = Way.STATE_RELEASED;
 		this.type = type;
@@ -68,12 +70,20 @@ public class Way implements Runnable{
 		return state;
 	}
 	
-	public void setState(int s) {
+	private void setState(int s) {
 		state = s;
+	}
+	
+	public int getTimestamp() {
+		return timestamp;
 	}
 	
 	private void setTimestamp(int time) {
 		this.timestamp = time;
+	}
+	
+	public int getPort() { 
+		return port;
 	}
 	
 	public void addWay(int port) {
@@ -97,7 +107,7 @@ public class Way implements Runnable{
 	// message accept thread
 	public void run() {
 		while (true) {
-			Message msg = tcp.recive();
+			Message msg = tcp.receive();
 			
 			try {
 				int milliesecond = (int)(Math.random()*1000);
@@ -125,11 +135,13 @@ public class Way implements Runnable{
 				if (type != TYPE_ENTRANCE)
 					throw new RuntimeException("Port "+port+" Error: get wrong car");
 				getMsgIn(msg);
+				Main.printState();
 				break;
 			case Message.MSG_OUT:
 				if (type != TYPE_EXIT)
 					throw new RuntimeException("Port "+port+" Error: get wrong car");
 				getMsgOut(msg);
+				Main.printState();
 				break;
 			case Message.MSG_NEWIN:
 			case Message.MSG_NEWOUT:
@@ -137,6 +149,11 @@ public class Way implements Runnable{
 			case Message.MSG_ASK:
 				getMsgAsk(msg);
 				break;
+			case Message.MSG_REPLAY:
+				getMsgReplay(msg);
+				break;
+			default:
+				throw new RuntimeException("Get wrong message");
 			}
 		}
 	}
@@ -146,24 +163,27 @@ public class Way implements Runnable{
 	 * @param msg
 	 */
 	private void getMsgIn(Message msg) {
-		this.timestamp += 1;
-		msg.setTimestamp(this.timestamp);
-		
-		System.out.println(port+" get car in, STATE_WANTED");
-		
-		setState(STATE_WANTED);
-		boolean result = waitIntoZone();
-		
-		if (result == false) {
-			throw new RuntimeException("Port "+port+" Error:wait into zone");
+		// if already a car, sleep some while
+		while (state != STATE_RELEASED) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 		
-		System.out.println(port+" STATE_HELD");
+		this.timestamp += 1;
 		
+		System.out.println(port+" get car in, STATE_WANTED");
+		setState(STATE_WANTED);
+		// get into zone
+		sendAskAndWait();
+		
+		System.out.println(port+" STATE_HELD");
 		setState(STATE_HELD);
 		if (remainNum > 0) {
 			inNum++;
-			System.out.println("Port "+port+": get one car in");
+			System.out.println("Port "+port+": one car get carport!");
 		}else {
 			System.out.println("Port "+port+": get one car in, but no carport remain");
 		}
@@ -175,26 +195,22 @@ public class Way implements Runnable{
 		
 	}
 	
-	/**
-	 * ask permit to into critical zone
-	 * wait until permit num is all entrance and exit num
-	 * @return
-	 */
-	private boolean waitIntoZone() {
-		int nowNum = 0;
+	private void sendAskAndWait() {
+		permitNum = 0;
+		
 		remainNum = carportNum - inNum + outNum;
 		for (int toPort:allPorts) {
 			if (toPort == this.port) continue;
-			Message msg = tcp.sendForAskAndWait(toPort);
-			if (msg != null) {
-				nowNum++;
-				remainNum += msg.getOutNum() - msg.getInNum();
-			}
+			tcp.sendAsk(toPort, timestamp);
 		}
 		
-		if (nowNum < allPorts.size()) return false;
-		
-		return true;
+		while (permitNum<allPorts.size()) {
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	private void replyWaitQueue() {
@@ -215,7 +231,6 @@ public class Way implements Runnable{
 		System.out.println(port+" one car out");
 		outNum++;
 	}
-	
 	
 	/**
 	 * get ask for permit
@@ -241,6 +256,21 @@ public class Way implements Runnable{
 				sendPermit(msg.getPort());
 			}
 		}
+	}
+	
+	/**
+	 * get replay message
+	 * synchronized method
+	 * @param msg
+	 */
+	private synchronized void getMsgReplay(Message msg) {
+		if (state != STATE_WANTED) {
+			throw new RuntimeException(port+" State is not STATE_WANTED, get wrong message from "+msg.getPort());
+		}
+		System.out.println(port+" get permit from "+msg.getPort());
+		
+		permitNum++;
+		remainNum += msg.getOutNum() - msg.getInNum();
 	}
 
 }

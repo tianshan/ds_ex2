@@ -6,6 +6,7 @@ public class Message {
 	public final static int MSG_NEWIN = 3;
 	public final static int MSG_NEWOUT = 4;
 	public final static int MSG_ASK = 5;
+	public final static int MSG_REPLAY = 6;
 	
 	private int type;
 	
@@ -17,24 +18,52 @@ public class Message {
 	
 	private int outNum = 0;
 	
-	public Message(int type) {
-		if (type != MSG_IN || type != MSG_OUT) {
+	/**
+	 * replay message
+	 * @param port
+	 * @param inNum
+	 * @param outNum
+	 */
+	public Message(int port, int timestamp, int inNum, int outNum) {
+		type = MSG_REPLAY;
+		this.port = port;
+		this.timestamp = timestamp;
+		this.inNum = inNum;
+		this.outNum = outNum;
+	}
+	
+	/**
+	 * ask for permit message
+	 * or car in & car out message
+	 * @param port
+	 */
+	public Message(int type, int port, int timestamp) {
+		switch(type) {
+		case MSG_IN:
+		case MSG_OUT:
+		case MSG_ASK:
+			this.type = type;
+			this.port = port;
+			this.timestamp = timestamp;
+			break;
+		default:
 			throw new IllegalArgumentException("Error:message type");
 		}
-		this.type = type;
 	}
 	
 	public Message(String msg) {
 		String[] attr = msg.split("@");
 		
-		if (attr.length < 3) {
-			throw new RuntimeException("Error: msg num ");
-		}
+//		if (attr.length < 3) {
+//			throw new RuntimeException("Error: msg num ");
+//		}
 		
 		this.type = Byte.parseByte(attr[0]);
-		this.timestamp = Integer.parseInt(attr[1]);
+		this.port = Integer.parseInt(attr[1]);
+		this.timestamp = Integer.parseInt(attr[2]);
+		this.inNum = Integer.parseInt(attr[3]);
+		this.outNum = Integer.parseInt(attr[4]);
 		
-		this.port = Integer.parseInt(attr[2]);
 	}
 	
 	public void setTimestamp(int time) {

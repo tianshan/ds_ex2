@@ -9,20 +9,24 @@ public class Main {
 		
 //		TCPTest();
 		
+		System.out.println("begin test...");
+		System.out.println("Usage: inNum,outNum");
 		runTest();
 		
 	}
 	
 	public static int carportNum = 3;
 	
+	public static Way[] ways;
+	
 	public static void runTest() {
+		
+		// init
 		int[] ports = {10001, 10002, 10003, 10004, 10005};
-		
-		Way[] ways = new Way[ports.length];
-		
+		ways = new Way[ports.length];
 		for (int i=0; i<ports.length; i++) {
 			int type;
-			if (i>1) type = Way.TYPE_ENTRANCE;
+			if (i>=1) type = Way.TYPE_ENTRANCE;
 			else type = Way.TYPE_EXIT;
 			
 			ways[i] = new Way(type, ports.length, carportNum, ports[i], false);
@@ -31,6 +35,8 @@ public class Main {
 			Thread t = new Thread(ways[i]);
 			t.start();
 		}
+		// end of init
+		
 		TCPSocket tcp = null;
 		try {
 			tcp = new TCPSocket(10000);
@@ -48,28 +54,17 @@ public class Main {
 				
 				Message msg;
 				
-				msg = new Message(Message.MSG_IN);
+				msg = new Message(Message.MSG_IN, 0, 0);
 				for (int i=0; i<inNum; i++) {
-					int index = (int)(Math.random()*ports.length)+1;
+					int index = (int)(Math.random()*(ports.length-1))+1;
 					int port = ports[index];
 					
 					tcp.send(port, msg);
 				}
 				
-				msg = new Message(Message.MSG_OUT);
+				msg = new Message(Message.MSG_OUT, 0, 0);
 				for (int i=0; i<outNum; i++)
 					tcp.send(ports[0], msg);
-				
-				// check state
-				int in=0, out=0;
-				for (int i=0; i<ways.length; i++) {
-					in += ways[i].getInNum();
-					out += ways[i].getOutNum();
-				}
-				System.out.println("--state--");
-				System.out.println("total:"+carportNum);
-				System.out.println("in  num:"+in);
-				System.out.println("out num:"+out);
 				
 			}else {
 				break;
@@ -78,6 +73,23 @@ public class Main {
 		}
 	}
 	
+	public static void printState() {
+		// check state
+		int in=0, out=0;
+		for (int i=0; i<ways.length; i++) {
+			in += ways[i].getInNum();
+			out += ways[i].getOutNum();
+		}
+		System.out.println("--state--");
+		System.out.println("total:"+carportNum);
+		System.out.println("in  num:"+in);
+		System.out.println("out num:"+out);
+		
+		System.out.println("timestamp");
+		for (int i=0; i<ways.length; i++) {
+			System.out.println(ways[i].getPort()+":"+ways[i].getTimestamp());
+		}
+	}
 	
 	public static void TCPTest() {
 		TCPTestThread[] threads = new TCPTestThread[2];
@@ -117,7 +129,7 @@ public class Main {
 				tcp.send("127.0.0.1", 12346, msg);
 				break;
 			case 1:
-				msg = tcp.recive();
+				msg = tcp.receive();
 				break;
 			}
 		}

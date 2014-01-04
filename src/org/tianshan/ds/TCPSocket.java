@@ -17,6 +17,7 @@ public class TCPSocket {
 	private int port;
 	private PrintWriter out;
 	
+	private boolean isDebug = false;
 	
 	public TCPSocket(int port) throws IOException{
 		
@@ -24,7 +25,6 @@ public class TCPSocket {
 		
 		try{
 			serverSocket = new ServerSocket(port);
-			
 		}catch(UnknownHostException e){
 		}
 	}
@@ -58,7 +58,8 @@ public class TCPSocket {
 			os.write(msg.toBytes());
 			os.flush();
 			
-			System.out.println("Port "+port+"send msg to "+toPort);
+			if (isDebug)
+				System.out.println("Port:"+port+"\tsend msg to\t"+toPort);
 			
 			clientSocket.close();
 			
@@ -71,7 +72,7 @@ public class TCPSocket {
 		return true;
 	}
 	
-	public Message recive() {
+	public Message receive() {
 		Message msg=null;
 		try {
 			clientSocket = serverSocket.accept();
@@ -83,12 +84,15 @@ public class TCPSocket {
 			int len = is.read(buf);
 			String str = new String(buf, 0, len);
 			msg = new Message(str);
-			System.out.println("Port "+port+" get msg from "+msg.getPort());
+			
+			if (isDebug)
+				System.out.println("Port:"+port+"\tget msg from\t"+msg.getPort());
+			
+			clientSocket.close();
 			
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		
 		return msg;
 	}
 	
@@ -100,17 +104,16 @@ public class TCPSocket {
 		}
 	}
 	
-	public Message sendForAskAndWait(int port) {
-		// TODO:
-		Message msg = null;
-		
-		
-		
-		return msg;
+	public boolean sendAsk(int toPort, int timestamp) {
+		Message msg = new Message(Message.MSG_ASK, port, timestamp);
+		send(toPort, msg);
+		return true;
 	}
 	
-	public boolean sendPermit(int port, int inNum, int outNum) {
-		// TODO
+	public boolean sendPermit(int toPort, int inNum, int outNum) {
+		Message msg = new Message(port, -1, inNum, outNum);
+		send(toPort, msg);
+		
 		return true;
 	}
 
